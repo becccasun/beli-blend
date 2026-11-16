@@ -16,16 +16,20 @@ import {
 import { restaurantById, restaurants } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { OutlineChip, ScoreBadge } from "@/components/ui";
+import { ScreenSkeleton, useLoaded } from "@/components/skeleton";
 
 const tabs = ["Been", "Want to Try", "Recs", "Playlists"] as const;
 
 export default function ListsPage() {
+  const loaded = useLoaded("lists");
   const { ranked } = useStore();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Been");
   const rankedIds = new Set(ranked.map((e) => e.restaurantId));
   const unranked = restaurants.filter((r) => !rankedIds.has(r.id));
   const recs = [...unranked].sort((a, b) => b.recScore - a.recScore);
   const want = unranked.slice(3, 9);
+
+  if (!loaded) return <ScreenSkeleton kind="list" />;
 
   return (
     <div className="pb-6">

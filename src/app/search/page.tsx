@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Check, CirclePlus, Search } from "lucide-react";
 import { restaurants } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { RowsSkeleton, useLoaded } from "@/components/skeleton";
 
 export default function SearchPage() {
   const [q, setQ] = useState("");
+  const loaded = useLoaded("search");
   const { getEntry } = useStore();
   const results = restaurants.filter((r) =>
     (r.name + r.cuisines.join(" ")).toLowerCase().includes(q.toLowerCase())
@@ -30,7 +32,9 @@ export default function SearchPage() {
           <span className="pb-1 text-ink-3">Members</span>
         </div>
       </div>
-      {results.map((r) => {
+      {!loaded && <RowsSkeleton rows={7} avatar />}
+      {loaded &&
+        results.map((r) => {
         const done = !!getEntry(r.id);
         return (
           <Link
@@ -55,7 +59,7 @@ export default function SearchPage() {
             )}
           </Link>
         );
-      })}
+        })}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // Pure blend math. No React, no storage: everything takes plain rating maps so it is easy to test.
-import { restaurants, type Restaurant } from "./data";
+import { cities, restaurants, type Restaurant } from "./data";
 
 /** personId -> (restaurantId -> score) */
 export type RatingMap = Record<string, Record<string, number>>;
@@ -24,61 +24,85 @@ export function cuisineAverages(ratings: Record<string, number>, pool: Restauran
   return out;
 }
 
-/** Cosine similarity of two people's cuisine taste, centered on their own mean. 0..1 */
-function cuisineSimilarity(a: Record<string, number>, b: Record<string, number>) {
-  const ca = cuisineAverages(a);
-  const cb = cuisineAverages(b);
-  const keys = Object.keys(ca).filter((k) => k in cb);
-  if (!keys.length) return 0.5;
-  const ma = mean(Object.values(a));
-  const mb = mean(Object.values(b));
-  let dot = 0, na = 0, nb = 0;
-  for (const k of keys) {
-    const x = ca[k] - ma;
-    const y = cb[k] - mb;
-    dot += x * y;
-    na += x * x;
-    nb += y * y;
+/**
+ * What kind of place someone goes for, beyond cuisine. Each trait gathers a few of the tags
+ * (and cuisine labels) restaurants carry, so "Cocktails" also hears wine bars and breweries.
+ */
+export const TRAITS = [
+  { id: "date", label: "Date night", tags: ["Date Night", "Special Occasion", "Tasting Menu", "Fine Dining"] },
+  { id: "sharing", label: "Sharing", tags: ["Small Plates", "Tapas", "Groups"] },
+  { id: "drinks", label: "Cocktails", tags: ["Cocktails", "Wine", "Wine Bar", "Beer", "Brewery", "Margaritas", "BYOB"] },
+  { id: "casual", label: "Casual", tags: ["Casual", "Quick Bite", "Walk In", "Late Night"] },
+  { id: "brunch", label: "Brunch", tags: ["Brunch", "Breakfast", "Coffee", "Cafe"] },
+  { id: "sweet", label: "Sweets", tags: ["Dessert", "Donuts", "Cookies", "Pie", "Pastries", "Ice Cream", "Bakery"] },
+] as const;
+
+/** Average score per trait for one person. Traits they have never rated are left out. */
+export function traitAverages(ratings: Record<string, number>, pool: Restaurant[] = restaurants) {
+  const out: Record<string, number> = {};
+  for (const t of TRAITS) {
+    const scores: number[] = [];
+    for (const r of pool) {
+      const s = ratings[r.id];
+      if (s === undefined) continue;
+      if ([...r.tags, ...r.cuisines].some((x) => (t.tags as readonly string[]).includes(x))) scores.push(s);
+    }
+    if (scores.length) out[t.id] = mean(scores);
   }
-  if (!na || !nb) return 0.6;
-  return (dot / Math.sqrt(na * nb) + 1) / 2;
+  return out;
 }
 
+/** How closely two sets of averages agree, 0..100, over the keys both have. Null when none are shared. */
+function agreement(a: Record<string, number>, b: Record<string, number>) {
+  const keys = Object.keys(a).filter((k) => k in b);
+  if (!keys.length) return null;
+  const mad = mean(keys.map((k) => Math.abs(a[k] - b[k])));
+  return Math.round(clamp(100 - 22 * mad, 20, 99));
+}
+
+export type MatchParts = {
+  places: number | null; // same restaurants, similar scores
+  vibe: number | null; // same kinds of place rated high
+  cuisine: number | null; // same cuisines rated high
+};
+
 /**
- * Pairwise taste match, 0..100.
- * Over restaurants both have rated: 100 - 20 * mean absolute difference
- * (a 1 point average gap = 80%, 2.5 points = 50%).
- * Tiny overlap is shrunk toward a cuisine-similarity prior: weight n / (n + 3).
+ * Pairwise taste match, 0..100, from three signals:
+ *  - places:  over restaurants both ranked, 100 - 20 * mean absolute difference
+ *  - vibe:    agreement across TRAITS (date night, sharing, cocktails, casual...)
+ *  - cuisine: agreement across cuisines
+ * Places earn up to half the weight, growing with overlap (n / (n + 2)). The rest is split
+ * 60/40 between vibe and cuisine, so two people with nothing in common still get a real number.
  */
 export function pairMatch(a: Record<string, number>, b: Record<string, number>) {
   const shared = Object.keys(a).filter((k) => k in b);
   const n = shared.length;
-  const prior = 45 + 45 * cuisineSimilarity(a, b); // 45..90
-  if (n === 0) return { match: Math.round(prior), overlap: 0 };
-  const mad = mean(shared.map((k) => Math.abs(a[k] - b[k])));
-  const raw = clamp(100 - 20 * mad, 20, 99);
-  const w = n / (n + 3);
-  return { match: Math.round(clamp(w * raw + (1 - w) * prior, 20, 99)), overlap: n };
+  const places = n ? Math.round(clamp(100 - 20 * mean(shared.map((k) => Math.abs(a[k] - b[k]))), 20, 99)) : null;
+  const vibe = agreement(traitAverages(a), traitAverages(b));
+  const cuisine = agreement(cuisineAverages(a), cuisineAverages(b));
+  const parts: MatchParts = { places, vibe, cuisine };
+
+  const wPlaces = places === null ? 0 : 0.5 * (n / (n + 2));
+  const taste =
+    vibe !== null && cuisine !== null ? 0.6 * vibe + 0.4 * cuisine : vibe ?? cuisine ?? 60;
+  const match = Math.round(clamp(wPlaces * (places ?? 0) + (1 - wPlaces) * taste, 20, 99));
+  return { match, overlap: n, parts };
 }
 
-/** Group match = mean of every pair in the group. */
+/** Group match = mean of every pair. */
 export function groupMatch(people: Person[], ratings: RatingMap) {
-  const pairs: { a: string; b: string; match: number; overlap: number }[] = [];
+  const pairs: { a: string; b: string; match: number; overlap: number; parts: MatchParts }[] = [];
   for (let i = 0; i < people.length; i++)
     for (let j = i + 1; j < people.length; j++) {
       const m = pairMatch(ratings[people[i].id] ?? {}, ratings[people[j].id] ?? {});
       pairs.push({ a: people[i].id, b: people[j].id, ...m });
     }
-  return { match: Math.round(mean(pairs.map((p) => p.match))), pairs };
-}
-
-export function matchCopy(match: number, group: boolean) {
-  const w = group ? "all" : "both";
-  if (match >= 88) return `Basically the same stomach. You ${w} can pick blind.`;
-  if (match >= 78) return `Seriously aligned. Dinner plans should be easy.`;
-  if (match >= 65) return `Similar vibes with a few spicy debates.`;
-  if (match >= 50) return `Different tastes, which means great new spots to swap.`;
-  return `Opposites at the table. Let the blend referee.`;
+  const part = (k: keyof MatchParts) => {
+    const xs = pairs.map((p) => p.parts[k]).filter((x): x is number => x !== null);
+    return xs.length ? Math.round(mean(xs)) : null;
+  };
+  const parts: MatchParts = { places: part("places"), vibe: part("vibe"), cuisine: part("cuisine") };
+  return { match: Math.round(mean(pairs.map((p) => p.match))), pairs, parts };
 }
 
 export type BlendRow = {
@@ -93,8 +117,10 @@ export type BlendRow = {
 export type BlendResult = {
   people: Person[];
   match: number;
+  parts: MatchParts;
   pairs: { a: string; b: string; match: number; overlap: number }[];
   overlapCount: number;
+  traits: { id: string; label: string; per: Record<string, number> }[]; // traits at least two people have rated
   shared: BlendRow[]; // everyone rated, all above LOVE, by blended
   disagree: BlendRow[];
   tryTogether: BlendRow[];
@@ -147,7 +173,15 @@ export function predictTogether(r: Restaurant, people: Person[], taste: ReturnTy
 }
 
 export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaurant[] = restaurants): BlendResult {
-  const { match, pairs } = groupMatch(people, ratings);
+  const { match, pairs, parts } = groupMatch(people, ratings);
+  const perTrait = people.map((p) => traitAverages(ratings[p.id] ?? {}));
+  const traits = TRAITS.map((t) => {
+    const per: Record<string, number> = {};
+    people.forEach((p, i) => {
+      if (t.id in perTrait[i]) per[p.id] = perTrait[i][t.id];
+    });
+    return { id: t.id as string, label: t.label as string, per };
+  }).filter((t) => Object.keys(t.per).length >= 2);
   const scoresFor = (rid: string) => {
     const s: Record<string, number | undefined> = {};
     for (const p of people) s[p.id] = ratings[p.id]?.[rid];
@@ -207,8 +241,10 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
   return {
     people,
     match,
+    parts,
     pairs,
     overlapCount,
+    traits,
     shared,
     disagree: disagree.slice(0, 3),
     tryTogether: tryTogether.slice(0, 5),
@@ -217,6 +253,46 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
     cuisines,
   };
 }
+
+/**
+ * What a group has in common in one city. Blend never picks the city (it cannot know where
+ * people will be) and says nothing about who lives where; it only counts shared places.
+ */
+export type CityOption = {
+  city: string;
+  common: number; // places everyone has ranked
+  counts: Record<string, number>; // personId -> places ranked in this city
+};
+
+export function cityOptions(people: Person[], ratings: RatingMap, pool: Restaurant[] = restaurants): CityOption[] {
+  const total = (o: CityOption) => Object.values(o.counts).reduce((x, y) => x + y, 0);
+  return cities
+    .map((city) => {
+      const here = pool.filter((r) => r.city === city);
+      const counts: Record<string, number> = {};
+      for (const p of people) counts[p.id] = here.filter((r) => ratings[p.id]?.[r.id] !== undefined).length;
+      const common = here.filter((r) => people.every((p) => ratings[p.id]?.[r.id] !== undefined)).length;
+      return { city, common, counts };
+    })
+    .sort((a, b) => b.common - a.common || total(b) - total(a));
+}
+
+export const commonLabel = (n: number) => (n ? `${n} ${n === 1 ? "place" : "places"} in common` : "");
+
+export const cityPool = (city: string, pool: Restaurant[] = restaurants) => pool.filter((r) => r.city === city);
+
+/**
+ * The one place to lead with for a chosen city. Somewhere new to everyone first, then a
+ * favourite one side has not tried, then a place you already agree on.
+ */
+export function startHere(result: BlendResult) {
+  if (result.tryTogether[0]) return { row: result.tryTogether[0], predicted: true };
+  const row = result.theirPicks[0] ?? result.myPicks[0] ?? result.shared[0];
+  return row ? { row, predicted: false } : null;
+}
+
+/** Lightweight preview for a profile, before any blend exists. */
+export const teaser = (a: Record<string, number>, b: Record<string, number>) => pairMatch(a, b);
 
 /** Friend ids from a blend id ("maya" or "maya-judy"). Friend ids never contain "-". */
 export function parseBlendId(id: string, validIds: string[]) {

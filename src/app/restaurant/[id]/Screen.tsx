@@ -20,9 +20,11 @@ import { BASE, fmtScore, friendRatings, friends, restaurantById, timeAgo } from 
 import { useStore } from "@/lib/store";
 import { Avatar, PrimaryButton } from "@/components/ui";
 import RankSheet from "@/components/rank/RankSheet";
+import { ScreenSkeleton, useLoaded } from "@/components/skeleton";
 
 export default function RestaurantPage() {
   const { id } = useParams<{ id: string }>();
+  const loaded = useLoaded(`restaurant:${id}`);
   const router = useRouter();
   const r = restaurantById(id);
   const { getEntry, rankOf } = useStore();
@@ -33,6 +35,8 @@ export default function RestaurantPage() {
 
   const raters = friends.filter((f) => friendRatings[f.id]?.[r.id] !== undefined);
   const photos = [r.photo, `${BASE}/food/f6.jpg`, `${BASE}/food/f8.jpg`].filter((p, i, a) => a.indexOf(p) === i);
+
+  if (!loaded) return <ScreenSkeleton kind="place" />;
 
   return (
     <div className="pb-8">

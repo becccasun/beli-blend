@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Ellipsis, Utensils } from "lucide-react";
-import { friends, me, restaurantById } from "@/lib/data";
+import { ChevronLeft, Ellipsis, Utensils } from "lucide-react";
+import { me, restaurantById } from "@/lib/data";
 import { useStore } from "@/lib/store";
-import { Avatar, AvatarStack, ProgressBar, ScoreBadge } from "@/components/ui";
+import { Avatar, ProgressBar, ScoreBadge } from "@/components/ui";
+import { ScreenSkeleton, useLoaded } from "@/components/skeleton";
 
 const GOAL = 36;
 const BASE = 23; // places ranked earlier in the year, before the demo list
 
 export default function ChallengePage() {
+  const loaded = useLoaded("challenge");
   const router = useRouter();
   const { ranked } = useStore();
   const done = Math.min(GOAL, BASE + ranked.length);
   const recent = [...ranked].sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)).slice(0, 6);
+
+  if (!loaded) return <ScreenSkeleton kind="cards" />;
 
   return (
     <div className="pb-8">
@@ -43,19 +47,6 @@ export default function ChallengePage() {
         <ProgressBar value={done / GOAL} className="mt-2.5" />
         <div className="mt-2.5 text-[15px]">49 days left</div>
       </div>
-
-      {/* proposal entry point */}
-      <Link
-        href="/team"
-        className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-teal bg-teal-tint p-3"
-      >
-        <AvatarStack srcs={[me.avatar, friends[0].avatar, friends[1].avatar]} size={30} />
-        <div className="flex-1">
-          <div className="text-[14.5px] font-bold text-teal">Better with friends</div>
-          <div className="text-[12.5px] text-ink-2">Take on a challenge as a dining team</div>
-        </div>
-        <ChevronRight size={20} className="text-teal" />
-      </Link>
 
       <div className="px-4 pb-1 pt-5 text-[12px] font-bold uppercase tracking-[0.08em]">
         Recent

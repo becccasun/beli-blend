@@ -15,7 +15,7 @@ type Store = {
 };
 
 const Ctx = createContext<Store | null>(null);
-const KEY = "beli-proposal-ranked-v1";
+const KEY = "beli-proposal-ranked-v2";
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ranked, setRankedState] = useState<RankedEntry[]>(sortRanked(initialRanked));

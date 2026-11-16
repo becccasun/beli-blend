@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { List, Newspaper, Plus, Trophy, Signal, Wifi, BatteryFull } from "lucide-react";
 import { StoreProvider, useStore } from "@/lib/store";
-import { me } from "@/lib/data";
+import { useEffect } from "react";
+import { friendById, me } from "@/lib/data";
+import { blendActions } from "./blend/storage";
+import { SkeletonStyles } from "./skeleton";
 import { Avatar } from "./ui";
 
 const tabs = [
@@ -61,6 +64,21 @@ function Toast() {
   );
 }
 
+/** Prototype stand-in for the other person: sent blend requests get accepted after a few seconds. */
+function BlendWatcher() {
+  const { showToast } = useStore();
+  useEffect(() => {
+    const t = setInterval(() => {
+      for (const id of blendActions.tick()) {
+        const names = id.split("-").map((x) => friendById(x).name).join(" and ");
+        showToast(`${names} accepted your blend.`);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [showToast]);
+  return null;
+}
+
 export default function PhoneShell({ children }: { children: React.ReactNode }) {
   return (
     <StoreProvider>
@@ -83,6 +101,8 @@ export default function PhoneShell({ children }: { children: React.ReactNode }) 
           </main>
           <TabBar />
           <Toast />
+          <BlendWatcher />
+          <SkeletonStyles />
         </div>
       </div>
     </StoreProvider>

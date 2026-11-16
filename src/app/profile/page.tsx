@@ -11,21 +11,23 @@ import {
   Share,
   Shuffle,
   Trophy,
-  Users,
 } from "lucide-react";
 import { friends, me } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { Avatar, ProgressBar } from "@/components/ui";
+import { ScreenSkeleton, useLoaded } from "@/components/skeleton";
 
 export default function ProfilePage() {
+  const loaded = useLoaded("profile");
   const { ranked } = useStore();
   const rows = [
     { icon: CircleCheck, label: "Been", n: ranked.length, href: "/lists" },
     { icon: Bookmark, label: "Want to Try", n: 6, href: "/lists" },
     { icon: Heart, label: "Recs for You", n: null, href: "/lists" },
-    { icon: Users, label: "Team Challenges", n: null, href: "/team", isNew: true },
     { icon: Shuffle, label: "Blends", n: null, href: "/blend", isNew: true },
   ];
+  if (!loaded) return <ScreenSkeleton kind="me" />;
+
   return (
     <div className="pb-8">
       <div className="flex h-10 items-center justify-between px-4">

@@ -1,12 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Share, X } from "lucide-react";
-import { fmtScore, friendById, me, type Friend } from "@/lib/data";
-import type { BlendResult, BlendRow, Person } from "@/lib/blend";
+import { Check, MapPin, Send, Share, X } from "lucide-react";
+import { cityName, fmtScore, friendById, friendRatings, me, type Friend } from "@/lib/data";
+import { commonLabel, type BlendResult, type BlendRow, type CityOption, type Person, type RatingMap } from "@/lib/blend";
+import { useStore } from "@/lib/store";
 import { Avatar, AvatarStack, ScoreBadge } from "@/components/ui";
+import { CityWheel } from "./CityWheel";
+
+/** Everyone's scores, with the signed-in user's live rankings under "me". */
+export function useRatings(): RatingMap {
+  const { ranked } = useStore();
+  return useMemo(() => {
+    const mine: Record<string, number> = {};
+    for (const e of ranked) mine[e.restaurantId] = e.score;
+    return { ...friendRatings, me: mine };
+  }, [ranked]);
+}
+
+export const toPeople = (friends: Friend[]): Person[] => [
+  { id: "me", name: "You" },
+  ...friends.map((f) => ({ id: f.id, name: f.name })),
+];
+
+/** "Maya" or "Maya and Judy" */
+export const namesOf = (friends: Friend[]) => friends.map((f) => f.name).join(" and ");
 
 export const personAvatar = (id: string) => (id === "me" ? me.avatar : friendById(id).avatar);
 export const firstName = (p: Person) => (p.id === "me" ? "You" : p.name);
@@ -15,7 +35,7 @@ export function groupTitle(friends: Friend[]) {
   return friends.length === 1 ? `You + ${friends[0].name}` : `You, ${friends[0].name} + ${friends[1].name}`;
 }
 
-function usePortalTarget() {
+export function usePortalTarget() {
   const [el, setEl] = useState<HTMLElement | null>(null);
   useEffect(() => setEl(document.getElementById("phone-root")), []);
   return el;
@@ -92,10 +112,14 @@ export function BlendListRow({
 /** Two (or three) avatars sliding together, then the result appears. ~1.5s, instant-ish with reduced motion. */
 export function BlendingMoment({ friends, onDone }: { friends: Friend[]; onDone: () => void }) {
   const target = usePortalTarget();
+  const done = useRef(onDone);
   useEffect(() => {
-    const t = setTimeout(onDone, prefersReducedMotion() ? 500 : 1500);
+    done.current = onDone;
+  });
+  useEffect(() => {
+    const t = setTimeout(() => done.current(), prefersReducedMotion() ? 500 : 1500);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, []);
   if (!target) return null;
   const srcs = [me.avatar, ...friends.map((f) => f.avatar)];
   const offsets = srcs.length === 2 ? [-46, 46] : [-60, 0, 60];
@@ -134,18 +158,21 @@ export function BlendingMoment({ friends, onDone }: { friends: Friend[]; onDone:
 export function BlendShareCard({
   result,
   title,
+  city,
   onClose,
   onShare,
 }: {
   result: BlendResult;
   title: string;
+  city?: string;
   onClose: () => void;
   onShare: () => void;
 }) {
   const target = usePortalTarget();
   if (!target) return null;
   const picks = (result.shared.length ? result.shared : result.tryTogether).slice(0, 3);
-  const pickLabel = result.shared.length ? "Top shared picks" : "Top picks to try together";
+  const where = city ? ` in ${cityName(city)}` : "";
+  const pickLabel = result.shared.length ? `Top shared picks${where}` : `Top picks to try together${where}`;
   return createPortal(
     <div className="absolute inset-0 z-50 flex animate-fade-in flex-col bg-teal">
       <div className="flex h-14 items-center justify-between px-4 pt-10">
@@ -193,5 +220,100 @@ export function BlendShareCard({
       <div className="h-24" />
     </div>,
     target
+  );
+}
+
+/**
+ * "Where are you eating?" as a bottom sheet. The pair turns the wheel to a city and confirms;
+ * Blend only notes how many places they have in common there.
+ */
+export function CitySheet({
+  options,
+  current,
+  onPick,
+  onClose,
+}: {
+  options: CityOption[];
+  current?: string;
+  onPick: (city: string) => void;
+  onClose: () => void;
+}) {
+  const target = usePortalTarget();
+  const [city, setCity] = useState(current ?? options[0]?.city ?? "");
+  if (!target) return null;
+  return createPortal(
+    <div className="absolute inset-0 z-50 flex flex-col justify-end">
+      <button aria-label="Close" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/40" />
+      <div className="animate-sheet-up relative rounded-t-[20px] bg-white px-4 pb-8 pt-3">
+        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
+        <div className="text-center font-serif text-[22px] font-bold text-ink">Where are you eating?</div>
+        <CityWheel
+          items={options.map((o) => ({ value: o.city, label: cityName(o.city), note: commonLabel(o.common) }))}
+          value={city}
+          onChange={setCity}
+        />
+        <button
+          onClick={() => onPick(city)}
+          className="flex h-[44px] w-full items-center justify-center gap-2 rounded-full bg-teal text-[15px] font-semibold text-white transition active:scale-[0.99]"
+        >
+          <MapPin size={16} />
+          Eat in {cityName(city)}
+        </button>
+      </div>
+    </div>,
+    target
+  );
+}
+
+/** One suggestion at the top of a city's list, with a way to act on it. */
+export function StartHereCard({
+  row,
+  predicted,
+  toName,
+  onSuggest,
+}: {
+  row: BlendRow;
+  predicted: boolean;
+  toName: string;
+  onSuggest: () => void;
+}) {
+  const [sent, setSent] = useState(false);
+  const r = row.restaurant;
+  return (
+    <div className="mx-4 mt-4 overflow-hidden rounded-[16px] border border-teal bg-teal-tint">
+      <Link href={`/restaurant/${r.id}`} className="flex gap-3 p-3 active:opacity-80">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={r.photo} alt="" className="h-[76px] w-[76px] shrink-0 rounded-[10px] object-cover" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-teal">Start here</div>
+          <div className="truncate font-serif text-[19px] font-bold leading-tight text-ink">{r.name}</div>
+          <div className="truncate text-[13px] text-ink-2">
+            {r.price} | {r.cuisines.join(", ")}
+          </div>
+          <div className="truncate text-[13px] text-ink-3">{r.hood}</div>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <ScoreBadge score={row.blended} size={40} />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+            {predicted ? "predicted" : "score"}
+          </span>
+        </div>
+      </Link>
+      <div className="px-3 pb-3">
+        <button
+          onClick={() => {
+            if (sent) return;
+            setSent(true);
+            onSuggest();
+          }}
+          className={`flex h-[40px] w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold transition active:scale-[0.99] ${
+            sent ? "border border-teal bg-white text-teal" : "bg-teal text-white"
+          }`}
+        >
+          {sent ? <Check size={16} strokeWidth={3} /> : <Send size={15} />}
+          {sent ? `Suggested to ${toName}` : `Suggest it to ${toName}`}
+        </button>
+      </div>
+    </div>
   );
 }
