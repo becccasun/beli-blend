@@ -30,7 +30,7 @@ import {
   useRatings,
 } from "@/components/blend/parts";
 import { RequestSheet } from "@/components/blend/RequestSheet";
-import { MatchMeters, SwapCard, TasteProfile } from "@/components/blend/taste";
+import { MatchMeters, SwapCard } from "@/components/blend/taste";
 import { useBlends } from "@/components/blend/storage";
 import { BlendSkeleton, CuratingSkeleton, useLoaded } from "@/components/skeleton";
 
@@ -98,11 +98,10 @@ export default function BlendResultPage() {
     document.getElementById("phone-scroll")?.scrollTo({ top: 0 });
   };
 
-  const tasteSection = <TasteProfile traits={overall.traits} people={people} />;
   const cuisineSection = overall.cuisines.length > 0 && (
     <section>
       <SectionLabel>Cuisine overlap</SectionLabel>
-      <div className="mx-4 flex flex-col gap-3 rounded-[14px] bg-fill p-3.5">
+      <div className="mx-4 flex flex-col gap-2.5 rounded-[14px] bg-fill px-3.5 py-3">
         {overall.cuisines.map((c) => (
           <div key={c.cuisine}>
             <div className="flex items-center justify-between text-[13px]">
@@ -130,11 +129,11 @@ export default function BlendResultPage() {
 
   const header = (
     <div className="flex flex-col items-center px-4 pb-4 pt-3 text-center">
-      <AvatarStack srcs={[me.avatar, ...groupFriends.map((f) => f.avatar)]} size={64} />
-      <div className="mt-3 text-[14px] font-semibold text-ink-2">{title}</div>
+      <AvatarStack srcs={[me.avatar, ...groupFriends.map((f) => f.avatar)]} size={56} />
+      <div className="mt-2 text-[14px] font-semibold text-ink-2">{title}</div>
       <div className="mt-1 font-serif text-[52px] font-bold leading-none text-teal">{overall.match}%</div>
       <div className="mt-1 text-[12px] font-bold uppercase tracking-[0.1em] text-ink">Taste match</div>
-      <MatchMeters parts={overall.parts} overlap={overall.overlapCount} className="mt-4 max-w-[300px]" />
+      <MatchMeters parts={overall.parts} overlap={overall.overlapCount} className="mt-3 max-w-[300px]" />
     </div>
   );
 
@@ -199,7 +198,6 @@ export default function BlendResultPage() {
             </>
           )}
         </div>
-        {tasteSection}
         {cuisineSection}
         {asking && (
           <RequestSheet
@@ -242,8 +240,7 @@ export default function BlendResultPage() {
               </span>
             </PrimaryButton>
           </section>
-          {tasteSection}
-          {cuisineSection}
+            {cuisineSection}
         </>
       ) : (
         <>
@@ -372,7 +369,6 @@ export default function BlendResultPage() {
             </section>
           )}
 
-          {filter === "all" && tasteSection}
           {filter === "all" && cuisineSection}
 
           <div className="px-4 pt-6">

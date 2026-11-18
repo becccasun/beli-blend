@@ -235,7 +235,7 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
     .filter(([, t]) => t.raters >= minRaters)
     .map(([cuisine, t]) => ({ cuisine, avg: t.avg, per: t.per, full: t.raters === people.length }))
     .sort((a, b) => Number(b.full) - Number(a.full) || b.avg - a.avg)
-    .slice(0, 5)
+    .slice(0, 4)
     .map(({ cuisine, avg, per }) => ({ cuisine, avg, per }));
 
   return {

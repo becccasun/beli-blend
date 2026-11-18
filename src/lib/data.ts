@@ -125,11 +125,73 @@ export const restaurants: Restaurant[] = [
     r("parks-bbq", "Park's BBQ", "$$$", ["Korean", "BBQ"], "Koreatown", 11, 8.9, 9.0, ["Groups", "Dinner"]),
     r("sqirl", "Sqirl", "$$", ["Brunch", "Cafe"], "Silver Lake", 8, 8.5, 8.6, ["Brunch", "Bowls"]),
   ].map((x) => ({ ...x, city: "Los Angeles, CA" })),
+
+  // Abroad, so a blend can be pointed at a trip as well as a home town.
+  ...[
+    r("afuri", "Afuri Ebisu", "$", ["Japanese", "Ramen"], "Ebisu", 12, 8.8, 8.9, ["Ramen", "Casual", "Late Night"]),
+    r("udon-shin", "Udon Shin", "$$", ["Japanese", "Noodles"], "Shinjuku", 2, 9.1, 9.0, ["Udon", "Walk In", "Dinner"]),
+    r("tonki", "Tonki", "$$", ["Japanese"], "Meguro", 9, 8.6, 8.7, ["Tonkatsu", "Dinner", "Iconic"]),
+    r("savoy", "Savoy", "$$", ["Pizza"], "Azabu-Juban", 1, 9.0, 9.1, ["Pizza", "Wood Fired", "Date Night"]),
+  ].map((x) => ({ ...x, city: "Tokyo, Japan" })),
+  ...[
+    r("mizuno", "Okonomiyaki Mizuno", "$$", ["Japanese"], "Dotonbori", 10, 8.9, 8.8, ["Okonomiyaki", "Casual", "Groups"]),
+    r("daruma", "Kushikatsu Daruma", "$", ["Japanese"], "Shinsekai", 9, 8.4, 8.5, ["Quick Bite", "Beer", "Late Night"]),
+    r("mel", "Mel Coffee Roasters", "$", ["Coffee Shop"], "Shinmachi", 7, 8.7, 8.6, ["Coffee", "Quick Bite"]),
+  ].map((x) => ({ ...x, city: "Osaka, Japan" })),
+  ...[
+    r("owariya", "Honke Owariya", "$$", ["Japanese", "Noodles"], "Nakagyo", 2, 8.7, 8.8, ["Soba", "Lunch", "Iconic"]),
+    r("monk", "Monk", "$$$", ["Pizza", "Wood Fired"], "Philosopher's Path", 4, 9.3, 9.2, ["Tasting Menu", "Date Night"]),
+    r("kagizen", "Kagizen Yoshifusa", "$$", ["Dessert", "Tea House"], "Gion", 5, 8.8, 8.7, ["Dessert", "Seasonal"]),
+  ].map((x) => ({ ...x, city: "Kyoto, Japan" })),
+  ...[
+    r("septime", "Septime", "$$$$", ["French"], "11th", 3, 9.4, 9.4, ["Tasting Menu", "Date Night", "Wine"]),
+    r("breizh", "Breizh Café", "$$", ["French", "Crêpes"], "Le Marais", 8, 8.7, 8.6, ["Brunch", "Casual"]),
+    r("las-du", "L'As du Fallafel", "$", ["Middle Eastern"], "Le Marais", 6, 8.8, 8.7, ["Quick Bite", "Iconic"]),
+    r("du-pain", "Du Pain et des Idées", "$", ["Bakery"], "10th", 5, 9.1, 9.0, ["Pastries", "Breakfast"]),
+  ].map((x) => ({ ...x, city: "Paris, France" })),
+  ...[
+    r("daniel-denise", "Daniel et Denise", "$$$", ["French"], "Presqu'île", 4, 8.8, 8.9, ["Dinner", "Iconic", "Wine"]),
+    r("kitchen-cafe", "Le Kitchen Café", "$$", ["Brunch", "Cafe"], "7th", 8, 8.6, 8.7, ["Brunch", "Pastries"]),
+    r("terre-adelice", "Terre Adélice", "$", ["Ice Cream", "Dessert"], "Vieux Lyon", 5, 8.9, 8.8, ["Dessert", "Quick Bite"]),
+  ].map((x) => ({ ...x, city: "Lyon, France" })),
+  ...[
+    r("chez-etienne", "Chez Etienne", "$$", ["Pizza"], "Le Panier", 1, 8.7, 8.6, ["Pizza", "Casual", "Cash Only"]),
+    r("la-mercerie", "La Mercerie", "$$$", ["French", "Wine Bar"], "Noailles", 3, 9.0, 9.1, ["Small Plates", "Wine", "Date Night"]),
+    r("tuba", "Tuba Club", "$$$", ["Seafood"], "Les Goudes", 4, 8.8, 8.9, ["Seafood", "Cocktails", "Patio"]),
+  ].map((x) => ({ ...x, city: "Marseille, France" })),
+  ...[
+    r("contramar", "Contramar", "$$$", ["Mexican", "Seafood"], "Roma Norte", 4, 9.2, 9.3, ["Lunch", "Groups", "Seafood"]),
+    r("el-vilsito", "El Vilsito", "$", ["Mexican", "Tacos"], "Narvarte", 10, 9.1, 9.0, ["Tacos", "Late Night", "Casual"]),
+    r("rosetta", "Panadería Rosetta", "$", ["Bakery", "Cafe"], "Roma Norte", 5, 9.0, 8.9, ["Pastries", "Breakfast"]),
+  ].map((x) => ({ ...x, city: "Mexico City, Mexico" })),
+  ...[
+    r("itanoni", "Itanoní", "$", ["Mexican"], "Reforma", 10, 8.9, 8.8, ["Breakfast", "Casual"]),
+    r("criollo", "Criollo", "$$$", ["Mexican"], "Centro", 3, 9.1, 9.2, ["Tasting Menu", "Date Night", "Patio"]),
+    r("boulenc", "Boulenc", "$$", ["Bakery", "Brunch"], "Centro", 8, 8.8, 8.7, ["Brunch", "Pastries"]),
+  ].map((x) => ({ ...x, city: "Oaxaca, Mexico" })),
+  ...[
+    r("las-9", "Birriería Las 9 Esquinas", "$", ["Mexican"], "Centro", 9, 8.9, 8.8, ["Birria", "Lunch", "Casual"]),
+    r("xokol", "Xokol", "$$$", ["Mexican"], "Santa Tere", 11, 9.2, 9.1, ["Tasting Menu", "Groups"]),
+    r("karne", "Karne Garibaldi", "$$", ["Mexican"], "Santa Tere", 6, 8.5, 8.4, ["Quick Bite", "Groups"]),
+  ].map((x) => ({ ...x, city: "Guadalajara, Mexico" })),
 ];
 
 /** Every city that has restaurants, in a stable order. */
 export const cities = Array.from(new Set(restaurants.map((x) => x.city)));
 export const cityName = (city: string) => city.split(",")[0];
+
+/** "Ann Arbor, MI" is in the United States; "Tokyo, Japan" names its country. */
+export const countryOf = (city: string) => {
+  const tail = city.split(", ")[1] ?? "";
+  return /^[A-Z]{2}$/.test(tail) ? "United States" : tail;
+};
+export const countries = Array.from(new Set(cities.map(countryOf)));
+export const countryFlag: Record<string, string> = {
+  "United States": "🇺🇸",
+  Japan: "🇯🇵",
+  France: "🇫🇷",
+  Mexico: "🇲🇽",
+};
 
 export const restaurantById = (id: string) =>
   restaurants.find((x) => x.id === id) ?? restaurants[0];
@@ -161,14 +223,14 @@ export const friendById = (id: string) =>
 
 // Each friend's own scores for restaurants (used by friend score and blend).
 export const friendRatings: Record<string, Record<string, number>> = {
-  maya: { spencer: 9.4, "miss-kim": 9.1, mani: 8.2, frita: 7.9, "blank-slate": 9.6, slurping: 6.8, echelon: 9.3, ricewood: 9.0, aventura: 8.8, roos: 8.1, cardamom: 8.9, "bao-boys": 8.5, savas: 6.2, "via-carota": 9.5, "cho-dang-gol": 9.0, "win-son": 8.9, dhamaka: 8.4, russ: 8.2, levain: 7.6 },
-  eliot: { zingermans: 9.5, frita: 9.2, jolly: 8.4, chelas: 8.6, tomukun: 8.0, savas: 7.8, isalita: 8.1, ricewood: 9.3, dimo: 8.8, mani: 7.4, "blank-slate": 8.9, pequods: 9.4, "sun-wah": 9.0, birrieria: 9.2, lula: 8.3, "girl-goat": 8.1, buddys: 9.1, selden: 8.7 },
-  judy: { spencer: 9.0, echelon: 9.6, "pacific-rim": 9.1, mani: 9.0, aventura: 8.5, "miss-kim": 8.4, zingermans: 8.7, york: 8.6, juicy: 8.2, frita: 8.3, roos: 9.0, cardamom: 8.0, bestia: 9.4, "parks-bbq": 9.0, selden: 9.2 },
+  maya: { spencer: 9.4, "miss-kim": 9.1, mani: 8.2, frita: 7.9, "blank-slate": 9.6, slurping: 6.8, echelon: 9.3, ricewood: 9.0, aventura: 8.8, roos: 8.1, cardamom: 8.9, "bao-boys": 8.5, savas: 6.2, "via-carota": 9.5, "cho-dang-gol": 9.0, "win-son": 8.9, dhamaka: 8.4, russ: 8.2, levain: 7.6, afuri: 9.0, "udon-shin": 9.3, tonki: 8.4, septime: 9.4, breizh: 8.6, "du-pain": 9.1, contramar: 9.2 },
+  eliot: { zingermans: 9.5, frita: 9.2, jolly: 8.4, chelas: 8.6, tomukun: 8.0, savas: 7.8, isalita: 8.1, ricewood: 9.3, dimo: 8.8, mani: 7.4, "blank-slate": 8.9, pequods: 9.4, "sun-wah": 9.0, birrieria: 9.2, lula: 8.3, "girl-goat": 8.1, buddys: 9.1, selden: 8.7, "el-vilsito": 9.4, contramar: 8.8, itanoni: 9.0, "las-9": 9.1, daruma: 8.5 },
+  judy: { spencer: 9.0, echelon: 9.6, "pacific-rim": 9.1, mani: 9.0, aventura: 8.5, "miss-kim": 8.4, zingermans: 8.7, york: 8.6, juicy: 8.2, frita: 8.3, roos: 9.0, cardamom: 8.0, bestia: 9.4, "parks-bbq": 9.0, selden: 9.2, septime: 9.5, "la-mercerie": 9.0, monk: 9.3, contramar: 9.0, criollo: 9.2 },
   // Andrew has not been anywhere you have: the "nothing in common" case for Blend.
-  andrew: { chelas: 8.9, "bao-boys": 8.7, ricewood: 9.1, roos: 8.0, dimo: 8.6, cardamom: 7.9, "lunch-room": 7.2, york: 8.4, sonoratown: 9.3, "parks-bbq": 8.8, birrieria: 9.0 },
-  priya: { cardamom: 9.4, "miss-kim": 9.2, "lunch-room": 8.8, spencer: 8.9, "blank-slate": 9.3, juicy: 8.6, "first-bite": 8.0, aventura: 7.9, tomukun: 8.1, roos: 8.7 },
+  andrew: { chelas: 8.9, "bao-boys": 8.7, ricewood: 9.1, roos: 8.0, dimo: 8.6, cardamom: 7.9, "lunch-room": 7.2, york: 8.4, sonoratown: 9.3, "parks-bbq": 8.8, birrieria: 9.0, "el-vilsito": 9.2, karne: 8.7 },
+  priya: { cardamom: 9.4, "miss-kim": 9.2, "lunch-room": 8.8, spencer: 8.9, "blank-slate": 9.3, juicy: 8.6, "first-bite": 8.0, aventura: 7.9, tomukun: 8.1, roos: 8.7, breizh: 8.8, rosetta: 9.2, boulenc: 8.7 },
   sam: { zingermans: 9.1, dimo: 9.0, frita: 8.6, savas: 8.0, jolly: 7.7, chelas: 8.2 },
-  kate: { echelon: 9.1, spencer: 9.3, mani: 8.7, "pacific-rim": 8.8, york: 8.9, "blank-slate": 9.0, aventura: 8.6, juicy: 8.4, "via-carota": 9.4, lucali: 9.5, "thai-diner": 8.7, raku: 8.9, russ: 9.0, dhamaka: 8.8, levain: 8.0 },
+  kate: { echelon: 9.1, spencer: 9.3, mani: 8.7, "pacific-rim": 8.8, york: 8.9, "blank-slate": 9.0, aventura: 8.6, juicy: 8.4, "via-carota": 9.4, lucali: 9.5, "thai-diner": 8.7, raku: 8.9, russ: 9.0, dhamaka: 8.8, levain: 8.0, afuri: 8.6, savoy: 9.2, mizuno: 8.8, owariya: 8.5, septime: 9.1, "las-du": 8.9, "daniel-denise": 8.7 },
 };
 
 // The signed-in user's starting "Been" list. Note the old visit dates on several
@@ -189,6 +251,10 @@ export const initialRanked: RankedEntry[] = [
   { restaurantId: "via-carota", sentiment: "liked", score: 9.3, method: "manual", visitedAt: "2026-06-14" },
   { restaurantId: "russ", sentiment: "liked", score: 8.8, method: "manual", visitedAt: "2026-06-28" },
   { restaurantId: "thai-diner", sentiment: "liked", score: 8.3, method: "manual", visitedAt: "2026-07-05" },
+  // Two trips abroad, so a blend can find common ground outside the United States.
+  { restaurantId: "udon-shin", sentiment: "liked", score: 9.2, method: "manual", visitedAt: "2025-04-03" },
+  { restaurantId: "afuri", sentiment: "liked", score: 8.9, method: "manual", visitedAt: "2025-04-05" },
+  { restaurantId: "septime", sentiment: "liked", score: 9.4, method: "manual", visitedAt: "2024-06-20" },
 ];
 
 export type FeedItem = {

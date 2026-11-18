@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, MapPin, Send, Share, X } from "lucide-react";
-import { cityName, fmtScore, friendById, friendRatings, me, type Friend } from "@/lib/data";
+import { cityName, countries, countryFlag, countryOf, fmtScore, friendById, friendRatings, me, type Friend } from "@/lib/data";
 import { commonLabel, type BlendResult, type BlendRow, type CityOption, type Person, type RatingMap } from "@/lib/blend";
 import { useStore } from "@/lib/store";
 import { Avatar, AvatarStack, ScoreBadge } from "@/components/ui";
@@ -240,25 +240,53 @@ export function CitySheet({
 }) {
   const target = usePortalTarget();
   const [city, setCity] = useState(current ?? options[0]?.city ?? "");
+  const country = countryOf(city);
+  const here = options.filter((o) => countryOf(o.city) === country);
   if (!target) return null;
   return createPortal(
     <div className="absolute inset-0 z-50 flex flex-col justify-end">
       <button aria-label="Close" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/40" />
-      <div className="animate-sheet-up relative rounded-t-[20px] bg-white px-4 pb-8 pt-3">
+      <div className="animate-sheet-up relative rounded-t-[20px] bg-white pb-8 pt-3">
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
         <div className="text-center font-serif text-[22px] font-bold text-ink">Where are you eating?</div>
-        <CityWheel
-          items={options.map((o) => ({ value: o.city, label: cityName(o.city), note: commonLabel(o.common) }))}
-          value={city}
-          onChange={setCity}
-        />
-        <button
-          onClick={() => onPick(city)}
-          className="flex h-[44px] w-full items-center justify-center gap-2 rounded-full bg-teal text-[15px] font-semibold text-white transition active:scale-[0.99]"
-        >
-          <MapPin size={16} />
-          Eat in {cityName(city)}
-        </button>
+        <div role="tablist" aria-label="Country" className="no-scrollbar mt-3 flex justify-center gap-1.5 overflow-x-auto px-4">
+          {countries.map((c) => {
+            const on = c === country;
+            return (
+              <button
+                key={c}
+                role="tab"
+                aria-selected={on}
+                aria-label={c}
+                onClick={() => {
+                  // Switching country lands on its first city, the one with the most in common.
+                  if (!on) setCity(options.find((o) => countryOf(o.city) === c)?.city ?? city);
+                }}
+                className={`inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[14px] font-semibold transition ${
+                  on ? "border-teal bg-teal text-white" : "border-[#cfcfcf] bg-white text-ink"
+                }`}
+              >
+                <span aria-hidden>{countryFlag[c]}</span>
+                {c === "United States" ? "USA" : c}
+              </button>
+            );
+          })}
+        </div>
+        <div className="px-4">
+          <CityWheel
+            key={country}
+            items={here.map((o) => ({ value: o.city, label: cityName(o.city), note: commonLabel(o.common) }))}
+            value={city}
+            onChange={setCity}
+          />
+          <button
+            onClick={() => onPick(city)}
+            className="flex h-[44px] w-full items-center justify-center gap-2 rounded-full bg-teal text-[15px] font-semibold text-white transition active:scale-[0.99]"
+          >
+            <MapPin size={16} />
+            Eat in {cityName(city)}
+          </button>
+        </div>
       </div>
     </div>,
     target
