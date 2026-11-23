@@ -83,8 +83,8 @@ export default function FeedPage() {
       >
         <AvatarStack srcs={[me.avatar, friends[0].avatar]} size={30} />
         <div className="min-w-0 flex-1">
-          <div className="font-serif text-[17px] font-bold leading-tight">Blend</div>
-          <div className="mt-0.5 text-[12px] leading-snug text-teal/80">Find where to eat together</div>
+          <div className="font-serif text-[17px] font-bold leading-tight">Pairing</div>
+          <div className="mt-0.5 text-[12px] leading-snug text-teal/80">Find places you and a friend both love</div>
         </div>
         <span className="rounded-full bg-teal px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
           New

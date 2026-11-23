@@ -10,7 +10,6 @@ import { teaser } from "@/lib/blend";
 import { Avatar, AvatarStack, BackHeader, ScoreBadge, SectionLabel } from "@/components/ui";
 import { BlendingMoment, useRatings } from "@/components/blend/parts";
 import { RequestSheet } from "@/components/blend/RequestSheet";
-import { MatchMeters } from "@/components/blend/taste";
 import { useBlends } from "@/components/blend/storage";
 import { ProfileSkeleton, markLoaded, useLoaded } from "@/components/skeleton";
 
@@ -39,18 +38,18 @@ export default function UserProfile() {
     .map(([rid, score]) => ({ r: restaurantById(rid), score }));
 
   const blendButton = {
-    none: { label: "Blend", icon: Shuffle, cls: "bg-teal text-white border-teal", onClick: () => setAsking(true) },
+    none: { label: "Pair up", icon: Shuffle, cls: "bg-teal text-white border-teal", onClick: () => setAsking(true) },
     pending: {
       label: "Requested",
       icon: Clock,
       cls: "border-teal text-teal bg-teal-tint",
       onClick: () => {
         remove(person.id);
-        showToast("Blend request cancelled.");
+        showToast("Request cancelled.");
       },
     },
     incoming: {
-      label: "Accept blend",
+      label: "Accept",
       icon: Check,
       cls: "bg-teal text-white border-teal",
       onClick: () => {
@@ -59,7 +58,7 @@ export default function UserProfile() {
       },
     },
     active: {
-      label: "View blend",
+      label: "View pairing",
       icon: Shuffle,
       cls: "border-teal text-teal bg-white",
       onClick: () => router.push(`/blend/${person.id}`),
@@ -118,15 +117,17 @@ export default function UserProfile() {
         <div className="flex items-center gap-3">
           <AvatarStack srcs={[me.avatar, person.avatar]} size={40} />
           <div className="min-w-0 flex-1 text-[11px] font-bold uppercase tracking-[0.08em] text-teal">
-            Your taste with {person.name}
+            Taste match with {person.name}
           </div>
           <div className="font-serif text-[34px] font-bold leading-none text-teal">{t.match}%</div>
         </div>
-        <MatchMeters parts={t.parts} overlap={t.overlap} className="mt-3" />
+        <div className="mt-1 text-[13px] text-ink-2">
+          {t.overlap ? `${t.overlap} ${t.overlap === 1 ? "place" : "places"} you've both ranked` : "No places in common yet"}
+        </div>
 
         {status === "incoming" && (
           <div className="mt-3 rounded-[12px] bg-white p-3">
-            <div className="text-[14px] font-bold text-ink">{person.name} wants to blend with you</div>
+            <div className="text-[14px] font-bold text-ink">{person.name} wants to pair up</div>
             {invite?.note && <p className="mt-0.5 text-[13px] italic text-ink-2">&ldquo;{invite.note}&rdquo;</p>}
             <div className="mt-2.5 flex gap-2">
               <button
@@ -156,7 +157,7 @@ export default function UserProfile() {
             href={`/blend/${person.id}`}
             className="mt-3 flex items-center justify-between rounded-[12px] bg-white px-3 py-2.5 text-[14px] font-semibold text-ink"
           >
-            <span>{saved?.city ? `Your blend for ${cityName(saved.city)}` : "Choose a city for your blend"}</span>
+            <span>{saved?.city ? `Your picks for ${cityName(saved.city)}` : "Choose a city"}</span>
             <ChevronRight size={18} className="text-ink-3" />
           </Link>
         )}
@@ -169,7 +170,7 @@ export default function UserProfile() {
       ) : (
         <div className="mx-4 mt-5 flex items-center gap-2 rounded-[16px] border border-line p-4 text-[14px] text-ink-2">
           <Lock size={16} className="shrink-0" />
-          Blends are for friends who follow each other.
+          Pair up once {person.name} follows you back.
         </div>
       )}
 
@@ -216,7 +217,7 @@ export default function UserProfile() {
           onSend={(note) => {
             request([person.id], note);
             setAsking(false);
-            showToast(`Blend request sent to ${person.name}.`);
+            showToast(`Request sent to ${person.name}.`);
           }}
         />
       )}

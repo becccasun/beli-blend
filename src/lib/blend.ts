@@ -121,11 +121,10 @@ export type BlendResult = {
   pairs: { a: string; b: string; match: number; overlap: number }[];
   overlapCount: number;
   traits: { id: string; label: string; per: Record<string, number> }[]; // traits at least two people have rated
+  common: BlendRow[]; // everyone rated, top 5 by average score
   shared: BlendRow[]; // everyone rated, all above LOVE, by blended
   disagree: BlendRow[];
-  tryTogether: BlendRow[];
-  myPicks: BlendRow[]; // I love, no friend has been
-  theirPicks: BlendRow[]; // a friend loves, I have not been
+  together: BlendRow[]; // recommended for the whole group: new to everyone, or loved by some and new to the rest
   cuisines: { cuisine: string; avg: number; per: Record<string, number> }[];
 };
 
@@ -161,16 +160,26 @@ export function predictTogether(r: Restaurant, people: Person[], taste: ReturnTy
   }
   const blended = clamp(r.recScore + clamp(bonus, -0.8, 0.8), 0, 10);
   const group = people.length > 2;
-  let reason = group ? "A top rec for your whole crew" : "A top rec for you two";
+  let reason = group ? "A top rec for all of you" : "A top rec for you both";
   if (best && best.avg >= 7.8) {
     if (best.raters === people.length) reason = `You ${group ? "all" : "both"} rank ${best.c} high`;
     else {
       const fan = people.find((p) => (taste[best!.c].per[p.id] ?? 0) >= 7.8);
-      if (fan) reason = fan.id === "me" ? `You love ${best.c}, worth converting them` : `${fan.name} loves ${best.c}`;
+      if (fan) reason = fan.id === "me" ? `You rank ${best.c} high` : `${fan.name} ranks ${best.c} high`;
     }
-  } else if (r.recScore >= 9) reason = "Beli thinks you'll both be obsessed";
+  } else if (r.recScore >= 9) reason = "High Rec Score for you both";
   return { blended, reason };
 }
+
+/** What one person would likely give a place they have not tried: recScore nudged by their own cuisine averages. */
+export function predictFor(r: Restaurant, cuisineAvg: Record<string, number>) {
+  let bonus = 0;
+  for (const c of r.cuisines) if (c in cuisineAvg) bonus += (cuisineAvg[c] - 8) * 0.4;
+  return clamp(r.recScore + clamp(bonus, -0.8, 0.8), 0, 10);
+}
+
+const listNames = (ps: Person[], lower = false) =>
+  ps.map((p, i) => (p.id === "me" ? (lower || i > 0 ? "you" : "You") : p.name)).join(" and ");
 
 export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaurant[] = restaurants): BlendResult {
   const { match, pairs, parts } = groupMatch(people, ratings);
@@ -188,13 +197,13 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
     return s;
   };
   const taste = groupCuisineTaste(people, ratings);
-  const friendsOnly = people.filter((p) => p.id !== "me");
+  const ownTaste: Record<string, Record<string, number>> = {};
+  for (const p of people) ownTaste[p.id] = cuisineAverages(ratings[p.id] ?? {});
 
+  const common: BlendRow[] = [];
   const shared: BlendRow[] = [];
   const disagree: BlendRow[] = [];
-  const tryTogether: BlendRow[] = [];
-  const myPicks: BlendRow[] = [];
-  const theirPicks: BlendRow[] = [];
+  const together: BlendRow[] = [];
   let overlapCount = 0;
 
   for (const r of pool) {
@@ -205,29 +214,29 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
       const blended = mean(vals);
       const gap = Math.max(...vals) - Math.min(...vals);
       const loved = Math.min(...vals) >= LOVE - 0.5 && blended >= LOVE;
+      common.push({ restaurant: r, scores, blended, gap });
       if (loved) shared.push({ restaurant: r, scores, blended });
       if (gap >= (loved ? 1.5 : 1)) disagree.push({ restaurant: r, scores, blended, gap });
     } else if (vals.length === 0) {
+      // New to everyone: what the group as a whole is predicted to give it.
       const { blended, reason } = predictTogether(r, people, taste);
-      tryTogether.push({ restaurant: r, scores, blended, reason });
-    }
-    const mine = scores.me;
-    if (mine !== undefined && mine >= LOVE && friendsOnly.every((f) => scores[f.id] === undefined))
-      myPicks.push({ restaurant: r, scores, blended: mine, by: "me" });
-    if (mine === undefined) {
-      const fans = friendsOnly.filter((f) => (scores[f.id] ?? 0) >= LOVE);
-      if (fans.length) {
-        const top = fans.reduce((a, b) => ((scores[a.id] ?? 0) >= (scores[b.id] ?? 0) ? a : b));
-        theirPicks.push({ restaurant: r, scores, blended: mean(fans.map((f) => scores[f.id]!)), by: top.id });
-      }
+      together.push({ restaurant: r, scores, blended, reason });
+    } else if (Math.min(...vals) >= LOVE) {
+      // Loved by whoever has been, new to the rest: their real scores averaged with a
+      // prediction for everyone else, so the number speaks for the whole group.
+      const been = people.filter((p) => scores[p.id] !== undefined);
+      const fresh = people.filter((p) => scores[p.id] === undefined);
+      const blended = mean(people.map((p) => scores[p.id] ?? predictFor(r, ownTaste[p.id])));
+      const verdict = been.length === 1 ? `rated it ${scores[been[0].id]!.toFixed(1)}` : "love it";
+      const reason = `${listNames(been)} ${verdict}. New for ${listNames(fresh, true)}.`;
+      together.push({ restaurant: r, scores, blended, reason, by: been[0].id });
     }
   }
 
   const byBlend = (a: BlendRow, b: BlendRow) => b.blended - a.blended;
+  common.sort(byBlend);
   shared.sort(byBlend);
-  tryTogether.sort(byBlend);
-  myPicks.sort(byBlend);
-  theirPicks.sort(byBlend);
+  together.sort(byBlend);
   disagree.sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0));
 
   const minRaters = 2;
@@ -245,11 +254,10 @@ export function computeBlend(people: Person[], ratings: RatingMap, pool: Restaur
     pairs,
     overlapCount,
     traits,
+    common: common.slice(0, 5),
     shared,
     disagree: disagree.slice(0, 3),
-    tryTogether: tryTogether.slice(0, 5),
-    myPicks: myPicks.slice(0, 4),
-    theirPicks: theirPicks.slice(0, 4),
+    together: together.slice(0, 6),
     cuisines,
   };
 }
@@ -281,14 +289,10 @@ export const commonLabel = (n: number) => (n ? `${n} ${n === 1 ? "place" : "plac
 
 export const cityPool = (city: string, pool: Restaurant[] = restaurants) => pool.filter((r) => r.city === city);
 
-/**
- * The one place to lead with for a chosen city. Somewhere new to everyone first, then a
- * favourite one side has not tried, then a place you already agree on.
- */
+/** The one place to lead with for a chosen city: the top recommendation, else a place you already agree on. */
 export function startHere(result: BlendResult) {
-  if (result.tryTogether[0]) return { row: result.tryTogether[0], predicted: true };
-  const row = result.theirPicks[0] ?? result.myPicks[0] ?? result.shared[0];
-  return row ? { row, predicted: false } : null;
+  const row = result.together[0] ?? result.shared[0];
+  return row ? { row, predicted: row === result.together[0] } : null;
 }
 
 /** Lightweight preview for a profile, before any blend exists. */

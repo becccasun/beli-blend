@@ -119,7 +119,7 @@ export function RowsSkeleton({ rows = 4, avatar = false }: { rows?: number; avat
 /** Stacked cards on the Blends page. */
 export function BlendCardsSkeleton({ cards = 2 }: { cards?: number }) {
   return (
-    <Busy label="Loading blends">
+    <Busy label="Loading pairings">
       <Bone className="mx-4 mb-2 mt-5 h-3 w-24" />
       <div className="mx-4 flex flex-col gap-2.5">
         {Array.from({ length: cards }, (_, i) => (
@@ -176,8 +176,8 @@ export function ProfileSkeleton() {
 /** A blend: the two faces, the match, then whatever comes next. */
 export function BlendSkeleton() {
   return (
-    <Busy label="Loading blend">
-      <BackHeader title="Blend" />
+    <Busy label="Loading pairing">
+      <BackHeader title="Pairing" />
       <div className="flex flex-col items-center px-4 pb-4 pt-3">
         <span className="flex">
           <Bone className="h-16 w-16 !rounded-full" />
@@ -186,9 +186,8 @@ export function BlendSkeleton() {
         <Bone className="mt-3 h-4 w-24" />
         <Bone className="mt-2 h-[48px] w-[104px] !rounded-[10px]" />
         <Bone className="mt-2 h-3 w-24" />
-        <Bone className="mt-2 h-3 w-40" />
       </div>
-      <Bone className="mx-4 h-[108px] !rounded-[16px]" />
+      <Bone className="mx-4 h-[44px] !rounded-full" />
       <Bone className="mx-4 mb-2 mt-5 h-3 w-28" />
       <Bone className="mx-4 h-[180px] !rounded-[14px]" />
     </Busy>
@@ -201,14 +200,14 @@ export function BlendSkeleton() {
  */
 export function CuratingSkeleton({ city }: { city: string }) {
   return (
-    <Busy label={`Curating ${city}`}>
+    <Busy label={`Finding places in ${city}`}>
       <div className="flex items-center justify-center gap-2 px-4 pt-4 text-[13px] font-semibold text-teal">
         <span className="curating-dots" aria-hidden>
           <i />
           <i />
           <i />
         </span>
-        Curating {city}
+        Finding places in {city}
       </div>
       <div className="mx-4 mt-3 rounded-[16px] border border-line p-3">
         <div className="flex gap-3">

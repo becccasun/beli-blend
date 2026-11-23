@@ -33,7 +33,10 @@ export function RequestSheet({
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-line" />
         <div className="flex flex-col items-center text-center">
           <AvatarStack srcs={[me.avatar, ...friends.map((f) => f.avatar)]} size={60} />
-          <div className="mt-3 font-serif text-[24px] font-bold leading-tight text-ink">Blend with {names}?</div>
+          <div className="mt-3 font-serif text-[24px] font-bold leading-tight text-ink">Pair up with {names}?</div>
+          <p className="mt-1 text-[14px] leading-snug text-ink-2">
+            Once {friends.length > 1 ? "they accept" : `${names} accepts`}, you both get places you&apos;d both love.
+          </p>
         </div>
 
         <div className="mt-5 text-[12px] font-bold uppercase tracking-[0.08em] text-ink">Add a note (optional)</div>
@@ -62,7 +65,7 @@ export function RequestSheet({
         <PrimaryButton className="mt-4" onClick={() => onSend(note.trim())}>
           <span className="inline-flex items-center gap-2">
             <Shuffle size={16} />
-            Send blend request
+            Send request
           </span>
         </PrimaryButton>
       </div>

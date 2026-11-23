@@ -24,7 +24,7 @@ export default function ProfilePage() {
     { icon: CircleCheck, label: "Been", n: ranked.length, href: "/lists" },
     { icon: Bookmark, label: "Want to Try", n: 6, href: "/lists" },
     { icon: Heart, label: "Recs for You", n: null, href: "/lists" },
-    { icon: Shuffle, label: "Blends", n: null, href: "/blend", isNew: true },
+    { icon: Shuffle, label: "Pairings", n: null, href: "/blend", isNew: true },
   ];
   if (!loaded) return <ScreenSkeleton kind="me" />;
 

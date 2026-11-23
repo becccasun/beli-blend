@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, MapPin, Send, Share, X } from "lucide-react";
-import { cityName, countries, countryFlag, countryOf, fmtScore, friendById, friendRatings, me, type Friend } from "@/lib/data";
+import { Check, MapPin, Search, Send, Share, X } from "lucide-react";
+import { cityName, countries, countryOf, fmtScore, friendById, friendRatings, me, type Friend } from "@/lib/data";
 import { commonLabel, type BlendResult, type BlendRow, type CityOption, type Person, type RatingMap } from "@/lib/blend";
+import { allCountries } from "@/lib/countries";
 import { useStore } from "@/lib/store";
 import { Avatar, AvatarStack, ScoreBadge } from "@/components/ui";
-import { CityWheel } from "./CityWheel";
 
 /** Everyone's scores, with the signed-in user's live rankings under "me". */
 export function useRatings(): RatingMap {
@@ -50,10 +50,12 @@ function prefersReducedMotion() {
 }
 
 /** Little "who scored what" pills: avatar + score, side by side. */
-export function PersonScores({ row, people }: { row: BlendRow; people: Person[] }) {
+export function PersonScores({ row, people, ratedOnly = false }: { row: BlendRow; people: Person[]; ratedOnly?: boolean }) {
+  // ratedOnly leaves out anyone who has not been, instead of marking them "new".
+  const shown = ratedOnly ? people.filter((p) => row.scores[p.id] !== undefined) : people;
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-      {people.map((p) => {
+      {shown.map((p) => {
         const s = row.scores[p.id];
         return (
           <span
@@ -69,13 +71,14 @@ export function PersonScores({ row, people }: { row: BlendRow; people: Person[] 
   );
 }
 
-/** Numbered list row in Beli's list style, with a circled blended score on the right. */
+/** Numbered list row in Beli's list style: photo, where it is, and a circled blended score on the right. */
 export function BlendListRow({
   row,
   index,
   people,
   sub,
   showScores = true,
+  ratedOnly = false,
   predicted = false,
 }: {
   row: BlendRow;
@@ -83,11 +86,14 @@ export function BlendListRow({
   people: Person[];
   sub?: string;
   showScores?: boolean;
+  ratedOnly?: boolean;
   predicted?: boolean;
 }) {
   const r = row.restaurant;
   return (
     <Link href={`/restaurant/${r.id}`} className="flex items-start gap-3 border-b border-line px-4 py-3 active:bg-fill">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={r.photo} alt="" className="h-[68px] w-[68px] shrink-0 rounded-[10px] object-cover" />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[16px] font-bold text-ink">
           {index !== undefined && `${index}. `}
@@ -96,13 +102,16 @@ export function BlendListRow({
         <div className="truncate text-[13px] text-ink-2">
           {r.price} | {r.cuisines.join(", ")}
         </div>
-        {sub && <div className="mt-0.5 text-[13px] text-teal">{sub}</div>}
-        {showScores && <PersonScores row={row} people={people} />}
+        <div className="truncate text-[13px] text-ink-3">
+          {r.hood}, {r.city}
+        </div>
+        {sub && <div className="mt-0.5 text-[13px] leading-snug text-teal">{sub}</div>}
+        {showScores && <PersonScores row={row} people={people} ratedOnly={ratedOnly} />}
       </div>
       <div className="flex flex-col items-center gap-0.5 pt-0.5">
         <ScoreBadge score={row.blended} size={40} />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-          {predicted ? "predicted" : "blend"}
+          {predicted ? "rec" : "avg"}
         </span>
       </div>
     </Link>
@@ -147,8 +156,8 @@ export function BlendingMoment({ friends, onDone }: { friends: Friend[]; onDone:
           </span>
         ))}
       </div>
-      <div className="mt-6 font-serif text-[24px] font-bold text-ink">Blending your tastes</div>
-      <div className="mt-1 text-[14px] text-ink-2">Comparing every ranking, give us a sec</div>
+      <div className="mt-6 font-serif text-[24px] font-bold text-ink">Pairing your tastes</div>
+      <div className="mt-1 text-[14px] text-ink-2">Comparing your rankings</div>
     </div>,
     target
   );
@@ -170,7 +179,7 @@ export function BlendShareCard({
 }) {
   const target = usePortalTarget();
   if (!target) return null;
-  const picks = (result.shared.length ? result.shared : result.tryTogether).slice(0, 3);
+  const picks = (result.shared.length ? result.shared : result.together).slice(0, 3);
   const where = city ? ` in ${cityName(city)}` : "";
   const pickLabel = result.shared.length ? `Top shared picks${where}` : `Top picks to try together${where}`;
   return createPortal(
@@ -189,7 +198,7 @@ export function BlendShareCard({
             <div className="flex items-center gap-3">
               <AvatarStack srcs={result.people.map((p) => personAvatar(p.id))} size={44} />
               <div className="min-w-0">
-                <div className="text-[13px] text-ink-2">Our Beli Blend</div>
+                <div className="text-[13px] text-ink-2">Our Beli Pairing</div>
                 <div className="truncate text-[15px] font-bold text-ink">{title}</div>
               </div>
             </div>
@@ -223,9 +232,84 @@ export function BlendShareCard({
   );
 }
 
+/** A search-bar style input with its suggestions listed right underneath. */
+function SuggestField({
+  label,
+  placeholder,
+  value,
+  onType,
+  open,
+  onFocus,
+  inputRef,
+  autoFocus,
+  suggestions,
+  onPick,
+  empty,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onType: (v: string) => void;
+  open: boolean;
+  onFocus: () => void;
+  inputRef?: React.Ref<HTMLInputElement>;
+  autoFocus?: boolean;
+  suggestions: { value: string; label: string; note?: string }[];
+  onPick: (value: string) => void;
+  empty: string;
+}) {
+  return (
+    <div>
+      <label className="block">
+        <span className="mb-1 block text-[12px] font-bold uppercase tracking-[0.08em] text-ink">{label}</span>
+        <span className="flex h-[40px] items-center gap-2 rounded-[10px] bg-fill px-3">
+          <Search size={17} className="shrink-0 text-ink-3" />
+          <input
+            ref={inputRef}
+            autoFocus={autoFocus}
+            value={value}
+            onChange={(e) => onType(e.target.value)}
+            onFocus={onFocus}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && open && suggestions[0]) onPick(suggestions[0].value);
+            }}
+            placeholder={placeholder}
+            autoComplete="off"
+            className="w-full bg-transparent text-[15px] outline-none placeholder:text-ink-3"
+          />
+          {value && (
+            <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onType("")} className="shrink-0 text-ink-3">
+              <X size={16} />
+            </button>
+          )}
+        </span>
+      </label>
+      {open && (
+        <div role="listbox" aria-label={`${label} suggestions`} className="no-scrollbar max-h-[176px] overflow-y-auto">
+          {suggestions.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              role="option"
+              aria-selected={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onPick(s.value)}
+              className="flex w-full items-center justify-between gap-3 border-b border-line px-1 py-2.5 text-left active:bg-fill"
+            >
+              <span className="truncate text-[15px] font-semibold text-ink">{s.label}</span>
+              {s.note && <span className="shrink-0 text-[13px] text-ink-3">{s.note}</span>}
+            </button>
+          ))}
+          {suggestions.length === 0 && <div className="px-1 py-2.5 text-[14px] text-ink-3">{empty}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * "Where are you eating?" as a bottom sheet. The pair turns the wheel to a city and confirms;
- * Blend only notes how many places they have in common there.
+ * "Where are you eating?" as a bottom sheet: type a country, then a city, and pick from the
+ * suggestions. Blend only notes how many places the group has in common in each city.
  */
 export function CitySheet({
   options,
@@ -239,52 +323,99 @@ export function CitySheet({
   onClose: () => void;
 }) {
   const target = usePortalTarget();
-  const [city, setCity] = useState(current ?? options[0]?.city ?? "");
-  const country = countryOf(city);
-  const here = options.filter((o) => countryOf(o.city) === country);
+  const [country, setCountry] = useState(current ? countryOf(current) : "");
+  const [city, setCity] = useState(current ?? "");
+  const [countryQ, setCountryQ] = useState(country);
+  const [cityQ, setCityQ] = useState(current ? cityName(current) : "");
+  const [open, setOpen] = useState<"country" | "city" | null>(current ? null : "country");
+  const cityInput = useRef<HTMLInputElement>(null);
   if (!target) return null;
+
+  // Nothing is offered up front: suggestions only appear for what has been typed, names that
+  // start with it first.
+  const match = <T,>(items: T[], name: (x: T) => string, q: string) => {
+    const k = q.trim().toLowerCase();
+    if (!k) return [];
+    const hits = items.filter((x) => name(x).toLowerCase().includes(k));
+    return [...hits.filter((x) => name(x).toLowerCase().startsWith(k)), ...hits.filter((x) => !name(x).toLowerCase().startsWith(k))];
+  };
+  const countryHits = country ? [] : match(allCountries, (c) => c, countryQ).slice(0, 6);
+  const cityHits = city
+    ? []
+    : match(options.filter((o) => !country || countryOf(o.city) === country), (o) => cityName(o.city), cityQ);
+  const covered = !country || countries.includes(country);
+
+  const chooseCountry = (c: string) => {
+    setCountry(c);
+    setCountryQ(c);
+    if (city && countryOf(city) !== c) {
+      setCity("");
+      setCityQ("");
+    }
+    setOpen("city");
+    cityInput.current?.focus();
+  };
+  const chooseCity = (c: string) => {
+    setCity(c);
+    setCityQ(cityName(c));
+    setCountry(countryOf(c));
+    setCountryQ(countryOf(c));
+    setOpen(null);
+    cityInput.current?.blur();
+  };
+
   return createPortal(
     <div className="absolute inset-0 z-50 flex flex-col justify-end">
       <button aria-label="Close" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/40" />
       <div className="animate-sheet-up relative rounded-t-[20px] bg-white pb-8 pt-3">
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
         <div className="text-center font-serif text-[22px] font-bold text-ink">Where are you eating?</div>
-        <div role="tablist" aria-label="Country" className="no-scrollbar mt-3 flex justify-center gap-1.5 overflow-x-auto px-4">
-          {countries.map((c) => {
-            const on = c === country;
-            return (
-              <button
-                key={c}
-                role="tab"
-                aria-selected={on}
-                aria-label={c}
-                onClick={() => {
-                  // Switching country lands on its first city, the one with the most in common.
-                  if (!on) setCity(options.find((o) => countryOf(o.city) === c)?.city ?? city);
-                }}
-                className={`inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[14px] font-semibold transition ${
-                  on ? "border-teal bg-teal text-white" : "border-[#cfcfcf] bg-white text-ink"
-                }`}
-              >
-                <span aria-hidden>{countryFlag[c]}</span>
-                {c === "United States" ? "USA" : c}
-              </button>
-            );
-          })}
-        </div>
-        <div className="px-4">
-          <CityWheel
-            key={country}
-            items={here.map((o) => ({ value: o.city, label: cityName(o.city), note: commonLabel(o.common) }))}
-            value={city}
-            onChange={setCity}
+        <div className="mt-4 flex min-h-[340px] flex-col gap-3 px-4">
+          <SuggestField
+            label="Country"
+            placeholder="Type a country"
+            value={countryQ}
+            onType={(v) => {
+              setCountryQ(v);
+              setCountry("");
+              setCity("");
+              setCityQ("");
+              setOpen("country");
+            }}
+            open={open === "country" && !country && !!countryQ.trim()}
+            autoFocus={!current}
+            onFocus={() => setOpen("country")}
+            suggestions={countryHits.map((c) => ({ value: c, label: c }))}
+            onPick={chooseCountry}
+            empty="No countries match that."
+          />
+          <SuggestField
+            label="City"
+            placeholder={country ? `Type a city in ${country}` : "Type a city"}
+            value={cityQ}
+            onType={(v) => {
+              setCityQ(v);
+              setCity("");
+              setOpen("city");
+            }}
+            open={open === "city" && !city && !!cityQ.trim()}
+            onFocus={() => setOpen("city")}
+            inputRef={cityInput}
+            suggestions={cityHits.map((o) => ({
+              value: o.city,
+              label: country ? cityName(o.city) : o.city,
+              note: commonLabel(o.common),
+            }))}
+            onPick={chooseCity}
+            empty={covered ? "No cities match that." : `This prototype has no restaurants in ${country} yet.`}
           />
           <button
+            disabled={!city}
             onClick={() => onPick(city)}
-            className="flex h-[44px] w-full items-center justify-center gap-2 rounded-full bg-teal text-[15px] font-semibold text-white transition active:scale-[0.99]"
+            className="mt-auto flex h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-full bg-teal text-[15px] font-semibold text-white transition active:scale-[0.99] disabled:bg-teal-soft"
           >
             <MapPin size={16} />
-            Eat in {cityName(city)}
+            {city ? `Eat in ${cityName(city)}` : "Choose a city"}
           </button>
         </div>
       </div>
@@ -313,7 +444,7 @@ export function StartHereCard({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={r.photo} alt="" className="h-[76px] w-[76px] shrink-0 rounded-[10px] object-cover" />
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-teal">Start here</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-teal">Top pick</div>
           <div className="truncate font-serif text-[19px] font-bold leading-tight text-ink">{r.name}</div>
           <div className="truncate text-[13px] text-ink-2">
             {r.price} | {r.cuisines.join(", ")}
@@ -323,7 +454,7 @@ export function StartHereCard({
         <div className="flex flex-col items-center gap-0.5">
           <ScoreBadge score={row.blended} size={40} />
           <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-            {predicted ? "predicted" : "score"}
+            {predicted ? "rec" : "avg"}
           </span>
         </div>
       </Link>

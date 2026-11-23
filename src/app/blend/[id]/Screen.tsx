@@ -30,7 +30,6 @@ import {
   useRatings,
 } from "@/components/blend/parts";
 import { RequestSheet } from "@/components/blend/RequestSheet";
-import { MatchMeters, SwapCard } from "@/components/blend/taste";
 import { useBlends } from "@/components/blend/storage";
 import { BlendSkeleton, CuratingSkeleton, useLoaded } from "@/components/skeleton";
 
@@ -74,13 +73,13 @@ export default function BlendResultPage() {
     [city, people, ratings, overall]
   );
   const lead = city ? startHere(result) : null;
+  // The top pick sits in its own card, so on "All" the lists leave it out.
+  const leadId = lead && filter === "all" ? lead.row.restaurant.id : null;
+  const rest = (rows: typeof result.shared) => rows.filter((r) => r.restaurant.id !== leadId);
   const loaded = useLoaded(`blend:${blendId}`, 850);
   // Each city's list is put together the first time you ask for it.
   const curated = useLoaded(city ? `curate:${blendId}:${city}` : null, 1700);
   const allMutual = groupFriends.every(isMutual);
-  // Nothing ranked in common anywhere: lead with a trade of favourites instead of one pick.
-  const noOverlap = overall.overlapCount === 0;
-  const swap = noOverlap && !!(result.theirPicks[0] || result.myPicks[0]);
 
   const group = people.length > 2;
   const both = group ? "all" : "both";
@@ -89,7 +88,6 @@ export default function BlendResultPage() {
   const title = groupTitle(groupFriends);
   const where = city ? cityName(city) : "";
   const maxCuisine = Math.max(10, ...overall.cuisines.map((c) => c.avg));
-  const nameOf = (id: string) => (id === "me" ? "You" : friendById(id).name);
 
   const pickCity = (c: string) => {
     setCity(blendId, c);
@@ -100,7 +98,7 @@ export default function BlendResultPage() {
 
   const cuisineSection = overall.cuisines.length > 0 && (
     <section>
-      <SectionLabel>Cuisine overlap</SectionLabel>
+      <SectionLabel>Cuisines in common</SectionLabel>
       <div className="mx-4 flex flex-col gap-2.5 rounded-[14px] bg-fill px-3.5 py-3">
         {overall.cuisines.map((c) => (
           <div key={c.cuisine}>
@@ -133,7 +131,11 @@ export default function BlendResultPage() {
       <div className="mt-2 text-[14px] font-semibold text-ink-2">{title}</div>
       <div className="mt-1 font-serif text-[52px] font-bold leading-none text-teal">{overall.match}%</div>
       <div className="mt-1 text-[12px] font-bold uppercase tracking-[0.1em] text-ink">Taste match</div>
-      <MatchMeters parts={overall.parts} overlap={overall.overlapCount} className="mt-3 max-w-[300px]" />
+      <div className="mt-1 text-[13px] text-ink-2">
+        {overall.overlapCount
+          ? `From ${overall.overlapCount} ${overall.overlapCount === 1 ? "place" : "places"} you've ${both} ranked`
+          : "From the cuisines you each rank high"}
+      </div>
     </div>
   );
 
@@ -143,7 +145,7 @@ export default function BlendResultPage() {
   if (status !== "active") {
     return (
       <div className="pb-10">
-        <BackHeader title="Blend" />
+        <BackHeader title="Pairing" />
         {header}
         <div className="mx-4 rounded-[16px] border border-line p-4 text-center">
           {status === "pending" && (
@@ -156,7 +158,7 @@ export default function BlendResultPage() {
               <button
                 onClick={() => {
                   remove(blendId);
-                  showToast("Blend request cancelled.");
+                  showToast("Request cancelled.");
                 }}
                 className="mt-3 h-[40px] w-full rounded-full border border-[#cfcfcf] text-[14px] font-semibold text-ink"
               >
@@ -166,10 +168,10 @@ export default function BlendResultPage() {
           )}
           {status === "incoming" && (
             <>
-              <div className="font-serif text-[20px] font-bold text-ink">{names} wants to blend</div>
+              <div className="font-serif text-[20px] font-bold text-ink">{names} wants to pair up</div>
               {invite?.note && <p className="mt-1 text-[14px] italic text-ink-2">&ldquo;{invite.note}&rdquo;</p>}
               <PrimaryButton className="mt-3" onClick={() => { accept(groupFriends[0].id); setCelebrating(true); }}>
-                Accept blend
+                Accept
               </PrimaryButton>
               <button
                 onClick={() => {
@@ -189,11 +191,11 @@ export default function BlendResultPage() {
                 <PrimaryButton className="mt-3" onClick={() => setAsking(true)}>
                   <span className="inline-flex items-center gap-2">
                     <Shuffle size={16} />
-                    Request a blend
+                    Pair up
                   </span>
                 </PrimaryButton>
               ) : (
-                <p className="mt-1 text-[14px] leading-snug text-ink-2">Blends are for friends who follow each other.</p>
+                <p className="mt-1 text-[14px] leading-snug text-ink-2">Pair up once you follow each other.</p>
               )}
             </>
           )}
@@ -206,7 +208,7 @@ export default function BlendResultPage() {
             onSend={(note) => {
               request(groupFriends.map((f) => f.id), note);
               setAsking(false);
-              showToast(`Blend request sent to ${names}.`);
+              showToast(`Request sent to ${names}.`);
             }}
           />
         )}
@@ -218,9 +220,9 @@ export default function BlendResultPage() {
   return (
     <div className="pb-10">
       <BackHeader
-        title="Blend"
+        title="Pairing"
         right={
-          <button aria-label="Share blend" onClick={() => setSharing(true)} className="p-1">
+          <button aria-label="Share pairing" onClick={() => setSharing(true)} className="p-1">
             <Share size={21} />
           </button>
         }
@@ -231,16 +233,31 @@ export default function BlendResultPage() {
       {!city ? (
         <>
           {/* The one decision Blend will not make for you. */}
-          <section className="mx-4 rounded-[16px] border border-teal bg-teal-tint p-4 text-center">
-            <div className="font-serif text-[22px] font-bold leading-tight text-ink">Where are you eating?</div>
-            <PrimaryButton className="mt-3" onClick={() => setPickingCity(true)}>
+          <div className="px-4">
+            <PrimaryButton onClick={() => setPickingCity(true)}>
               <span className="inline-flex items-center gap-2">
                 <MapPin size={16} />
                 Choose a city
               </span>
             </PrimaryButton>
+            <p className="mt-2 text-center text-[13px] text-ink-2">See places you&apos;d {both} love there.</p>
+          </div>
+          <section>
+            <SectionLabel>You&apos;ve {both} ranked</SectionLabel>
+            {overall.common.length > 0 ? (
+              <div className="border-t border-line">
+                {overall.common.map((row, i) => (
+                  <BlendListRow key={row.restaurant.id} row={row} index={i + 1} people={people} />
+                ))}
+              </div>
+            ) : (
+              <p className="px-4 text-[14px] leading-snug text-ink-2">
+                You and {names} have never dined at the same place, or there are no restaurants that you have {both}{" "}
+                logged on Beli. Start eating together. Start logging together.
+              </p>
+            )}
           </section>
-            {cuisineSection}
+          {cuisineSection}
         </>
       ) : (
         <>
@@ -255,17 +272,16 @@ export default function BlendResultPage() {
             </button>
             <OutlineChip active={filter === "all"} onClick={() => setFilter("all")}>All</OutlineChip>
             {result.shared.length > 0 && (
-              <OutlineChip active={filter === "shared"} onClick={() => setFilter("shared")}>Shared favourites</OutlineChip>
+              <OutlineChip active={filter === "shared"} onClick={() => setFilter("shared")}>You {both} love</OutlineChip>
             )}
-            <OutlineChip active={filter === "new"} onClick={() => setFilter("new")}>New for {both}</OutlineChip>
+            <OutlineChip active={filter === "new"} onClick={() => setFilter("new")}>Recommended</OutlineChip>
           </div>
 
           {!curated ? (
             <CuratingSkeleton city={where} />
           ) : (
           <div className="animate-fade-in">
-          {filter === "all" && noOverlap && <SwapCard theirs={result.theirPicks[0]} mine={result.myPicks[0]} />}
-          {filter === "all" && lead && !swap && (
+          {filter === "all" && lead && (
             <StartHereCard
               key={`${city}-${lead.row.restaurant.id}`}
               row={lead.row}
@@ -275,63 +291,36 @@ export default function BlendResultPage() {
             />
           )}
 
-          {filter !== "new" && result.shared.length > 0 && (
+          {filter !== "new" && rest(result.shared).length > 0 && (
             <section>
               <SectionLabel>You {both} love</SectionLabel>
               <div className="border-t border-line">
-                {result.shared.map((row, i) => (
-                  <BlendListRow key={row.restaurant.id} row={row} index={i + 1} people={people} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {filter !== "shared" && result.theirPicks.length > 0 && (
-            <section>
-              <SectionLabel>{group ? "Their" : `${groupFriends[0].name}'s`} picks for you</SectionLabel>
-              <div className="border-t border-line">
-                {result.theirPicks.map((row) => (
-                  <BlendListRow
-                    key={row.restaurant.id}
-                    row={row}
-                    people={people}
-                    sub={`${nameOf(row.by ?? "")} gave it a ${fmtScore(row.scores[row.by ?? ""] ?? 0)}`}
-                    showScores={group}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {filter !== "shared" && result.myPicks.length > 0 && (
-            <section>
-              <SectionLabel>Your picks for {them}</SectionLabel>
-              <div className="border-t border-line">
-                {result.myPicks.map((row) => (
-                  <BlendListRow
-                    key={row.restaurant.id}
-                    row={{ ...row, blended: row.scores.me ?? row.blended }}
-                    people={people}
-                    sub={`You gave it a ${fmtScore(row.scores.me ?? 0)}`}
-                    showScores={false}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {filter !== "shared" && result.tryTogether.length > 0 && (
-            <section>
-              <SectionLabel>Try together</SectionLabel>
-              <p className="-mt-1 px-4 pb-2 text-[13px] text-ink-2">Nobody here has been yet.</p>
-              <div className="border-t border-line">
-                {result.tryTogether.map((row, i) => (
+                {rest(result.shared).map((row, i) => (
                   <BlendListRow
                     key={row.restaurant.id}
                     row={row}
                     index={i + 1}
                     people={people}
-                    showScores={false}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {filter !== "shared" && rest(result.together).length > 0 && (
+            <section>
+              <SectionLabel>Recommended for you {both}</SectionLabel>
+              <div className="border-t border-line">
+                {rest(result.together).map((row, i) => (
+                  <BlendListRow
+                    key={row.restaurant.id}
+                    row={row}
+                    index={i + 1}
+                    people={people}
+                    // Someone has been: their score pill says it. New to everyone: say why it fits.
+                    sub={row.by ? undefined : row.reason}
+                    showScores={!!row.by}
+                    ratedOnly
                     predicted
                   />
                 ))}
@@ -372,7 +361,7 @@ export default function BlendResultPage() {
           {filter === "all" && cuisineSection}
 
           <div className="px-4 pt-6">
-            <PrimaryButton onClick={() => setSharing(true)}>Share your blend</PrimaryButton>
+            <PrimaryButton onClick={() => setSharing(true)}>Share</PrimaryButton>
           </div>
           </div>
           )}
@@ -391,7 +380,7 @@ export default function BlendResultPage() {
           onClose={() => setSharing(false)}
           onShare={() => {
             setSharing(false);
-            showToast("Blend card copied. Go send it!");
+            showToast("Card copied.");
           }}
         />
       )}

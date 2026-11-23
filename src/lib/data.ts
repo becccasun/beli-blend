@@ -186,13 +186,6 @@ export const countryOf = (city: string) => {
   return /^[A-Z]{2}$/.test(tail) ? "United States" : tail;
 };
 export const countries = Array.from(new Set(cities.map(countryOf)));
-export const countryFlag: Record<string, string> = {
-  "United States": "🇺🇸",
-  Japan: "🇯🇵",
-  France: "🇫🇷",
-  Mexico: "🇲🇽",
-};
-
 export const restaurantById = (id: string) =>
   restaurants.find((x) => x.id === id) ?? restaurants[0];
 
@@ -220,6 +213,9 @@ export const friends: Friend[] = [
 
 export const friendById = (id: string) =>
   id === "me" ? me : friends.find((f) => f.id === id) ?? friends[0];
+
+/** Mock: how many meals you have logged with each friend (Beli's "with" tag). */
+export const mealsTogether: Record<string, number> = { maya: 14, kate: 9, judy: 6, priya: 5, eliot: 3, sam: 1, andrew: 0 };
 
 // Each friend's own scores for restaurants (used by friend score and blend).
 export const friendRatings: Record<string, Record<string, number>> = {

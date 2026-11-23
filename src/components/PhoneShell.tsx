@@ -71,7 +71,7 @@ function BlendWatcher() {
     const t = setInterval(() => {
       for (const id of blendActions.tick()) {
         const names = id.split("-").map((x) => friendById(x).name).join(" and ");
-        showToast(`${names} accepted your blend.`);
+        showToast(`${names} accepted. You're paired.`);
       }
     }, 1000);
     return () => clearInterval(t);
