@@ -4,8 +4,12 @@ import type { NextConfig } from "next";
 // NEXT_PUBLIC_BASE_PATH is set by the deploy workflow ("/<repo>"); empty for local dev.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+// Vercel sets VERCEL=1 during its builds. There the app is built the normal Next.js way
+// (every page is still prerendered) and served from the domain root, so no export is needed.
+const onVercel = Boolean(process.env.VERCEL);
+
 const nextConfig: NextConfig = {
-  output: "export",
+  output: onVercel ? undefined : "export",
   basePath,
   trailingSlash: true,
   images: { unoptimized: true },

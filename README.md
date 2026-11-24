@@ -16,4 +16,8 @@ npm install
 npx next dev -p 3012
 ```
 
+## Deploy on Vercel
+
+Import this repository at vercel.com/new and keep the defaults (framework: Next.js, no environment variables). `next.config.ts` detects Vercel and skips the static export that GitHub Pages uses, so both hosts build from the same code.
+
 Built with Next.js and Tailwind. Everything is mock data stored in the browser, so there is no backend.
